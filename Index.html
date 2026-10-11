@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFL Matchup Results Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.2);
+            --border-color: #334155;
+            --winner-color: #22c55e;
+            --loser-color: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        header h1 {
+            margin: 0 0 8px 0;
+            font-size: 2rem;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+        }
+
+        #status-indicator {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .dot {
+            height: 8px;
+            width: 8px;
+            background-color: var(--winner-color);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--winner-color);
+        }
+
+        /* Tabs Styling */
+        .tabs-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            background-color: var(--card-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .tab-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent);
+            color: #0f172a;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* Game Cards Grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .game-card-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .game-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-top: 5px solid var(--team-color, var(--accent));
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-card-link:hover .game-card {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px var(--team-glow, var(--accent-glow));
+            border-color: var(--team-color, var(--accent));
+        }
+
+        .matchup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .teams-score-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .team-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .team-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .team-logo-img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+
+        .team-row.winner { color: var(--winner-color); }
+        .team-row.loser { color: var(--loser-color); }
+
+        .score {
+            font-family: monospace;
+            font-size: 1.1rem;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .card-details {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .box-score-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 6px;
+            padding: 6px 10px;
+            background-color: var(--team-color, var(--accent));
+            color: #0f172a;
+            font-weight: 700;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .standouts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .player-tag {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        /* Halftime score highlights */
+        .ht-first-score {
+            color: var(--winner-color);
+            font-weight: 700;
+        }
+
+        .ht-second-score {
+            color: var(--loser-color);
+            font-weight: 700;
+        }
+
+        /* Standout Leaderboard Styling */
+        .standouts-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .standouts-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .standouts-table th, .standouts-table td {
+            padding: 14px 20px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .standouts-table th {
+            background-color: rgba(0, 0, 0, 0.3);
+            color: var(--accent);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .standouts-table th:last-child, .standouts-table td:last-child {
+            text-align: right;
+        }
+
+        .standouts-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .standouts-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .rank-badge {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            text-align: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-right: 12px;
+        }
+
+        .rank-1 .rank-badge { background: #ffd700; color: #0f172a; }
+        .rank-2 .rank-badge { background: #c0c0c0; color: #0f172a; }
+        .rank-3 .rank-badge { background: #cd7f32; color: #0f172a; }
+
+        .count-pill {
+            background: rgba(56, 189, 248, 0.2);
+            color: var(--accent);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .loading, .error {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 40px;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>NFL Matchup Results</h1>
+        <div id="status-indicator">
+            <span class="dot"></span> Live auto-updating active (Syncs every 30s)
+        </div>
+    </header>
+
+    <!-- Tabs Container -->
+    <div id="tabs-container" class="tabs-container"></div>
+
+    <!-- Main Content Container -->
+    <div id="grid-container" class="grid-container">
+        <div class="loading">Loading matchup data from spreadsheet...</div>
+    </div>
+
+    <script>
+        const PUBLISHED_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vScsIjJoR1nuHbRSXXtBGbgBRnpbe4J1rb4I-b5ayPUjydg-X3z99rhUWisVXmqgu_klKiDSl_BgCL7/pub?output=csv";
+
+        // Team database matching keywords to color & official logo URLs
+        const TEAM_COLORS_DB = [
+            { keywords: ["cardinals", "ari", "arizona"], color: "#97233F", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/ari.png" },
+            { keywords: ["falcons", "atl", "atlanta"], color: "#A71930", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/atl.png" },
+            { keywords: ["ravens", "bal", "baltimore"], color: "#241773", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/bal.png" },
+            { keywords: ["bills", "buf", "buffalo"], color: "#00338D", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png" },
+            { keywords: ["panthers", "car", "carolina"], color: "#0085CA", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/car.png" },
+            { keywords: ["bears", "chi", "chicago"], color: "#0B162A", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/chi.png" },
+            { keywords: ["bengals", "cin", "cincinnati"], color: "#FB4F14", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/cin.png" },
+            { keywords: ["browns", "cle", "cleveland"], color: "#FF3C00", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/cle.png" },
+            { keywords: ["cowboys", "dal", "dallas"], color: "#003594", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/dal.png" },
+            { keywords: ["broncos", "den", "denver"], color: "#FB4F14", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/den.png" },
+            { keywords: ["lions", "det", "detroit"], color: "#0076B6", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/det.png" },
+            { keywords: ["packers", "gb", "green bay"], color: "#203731", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/gb.png" },
+            { keywords: ["texans", "hou", "houston"], color: "#03202F", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/hou.png" },
+            { keywords: ["colts", "ind", "indianapolis"], color: "#002C5F", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/ind.png" },
+            { keywords: ["jaguars", "jax", "jags", "jacksonville"], color: "#006778", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/jax.png" },
+            { keywords: ["chiefs", "kc", "kansas city"], color: "#E31837", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/kc.png" },
+            { keywords: ["raiders", "lv", "las vegas"], color: "#A5ACAF", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/lv.png" },
+            { keywords: ["chargers", "lac"], color: "#0080C6", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/lac.png" },
+            { keywords: ["rams", "lar"], color: "#003594", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/lar.png" },
+            { keywords: ["dolphins", "mia", "miami"], color: "#008E97", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png" },
+            { keywords: ["vikings", "min", "minnesota"], color: "#4F2683", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/min.png" },
+            { keywords: ["patriots", "ne", "new england"], color: "#002244", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/ne.png" },
+            { keywords: ["saints", "no", "new orleans"], color: "#D3BC8D", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/no.png" },
+            { keywords: ["giants", "nyg"], color: "#0B2265", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png" },
+            { keywords: ["jets", "nyj"], color: "#125740", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png" },
+            { keywords: ["eagles", "phi", "philadelphia"], color: "#004C54", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/phi.png" },
+            { keywords: ["steelers", "pit", "pittsburgh"], color: "#FFB612", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/pit.png" },
+            { keywords: ["49ers", "niners", "sf", "san francisco"], color: "#AA0000", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png" },
+            { keywords: ["seahawks", "sea", "seattle"], color: "#69BE28", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/sea.png" },
+            { keywords: ["buccaneers", "bucs", "tb", "tampa bay"], color: "#D50A0A", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/tb.png" },
+            { keywords: ["titans", "ten", "tennessee"], color: "#4B92DB", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/ten.png" },
+            { keywords: ["commanders", "was", "washington"], color: "#5A1414", logo: "https://a.espncdn.com/i/teamlogos/nfl/500/was.png" }
+        ];
+
+        function getTeamInfo(teamName) {
+            if (!teamName) return { color: "#38bdf8", logo: "" };
+            const clean = teamName.toLowerCase().trim();
+            const found = TEAM_COLORS_DB.find(t => t.keywords.some(k => clean.includes(k)));
+            return found ? { color: found.color, logo: found.logo } : { color: "#38bdf8", logo: "" };
+        }
+
+        function formatHalftimeScore(halftimeStr) {
+            if (!halftimeStr || halftimeStr.toUpperCase() === 'N/A') return 'N/A';
+
+            let parts = halftimeStr.split("-");
+            if (parts.length !== 2) return halftimeStr;
+
+            let s1 = parts[0].trim();
+            let s2 = parts[1].trim();
+
+            return `<span class="ht-first-score">${s1}</span>-<span class="ht-second-score">${s2}</span>`;
+        }
+
+        let allMatchups = [];
+        let currentTab = null;
+        let lastRawData = "";
+
+        function parseCSV(text) {
+            let lines = [];
+            let row = [''];
+            let inQuotes = false;
+            
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i], next = text[i+1];
+                if (c === '"') {
+                    if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
+                    else { inQuotes = !inQuotes; }
+                } else if (c === ',' && !inQuotes) {
+                    row.push('');
+                } else if ((c === '\r' && next === '\n') || c === '\n') {
+                    if (!inQuotes) {
+                        lines.push(row);
+                        row = [''];
+                        if (c === '\r' && next === '\n') { i++; }
+                    } else {
+                        row[row.length - 1] += '\n';
+                    }
+                } else {
+                    row[row.length - 1] += c;
+                }
+            }
+            if (row.length > 1 || row[0] !== '') lines.push(row);
+            return lines;
+        }
+
+        function processData(csvText) {
+            const rows = parseCSV(csvText);
+            if (rows.length < 2) return [];
+
+            let matchups = [];
+            let activeWeek = "1";
+
+            for (let i = 1; i < rows.length; i++) {
+                let cols = rows[i];
+                if (!cols || cols.length < 4) continue;
+
+                let weekVal = cols[0] ? cols[0].trim() : "";
+                if (weekVal !== "" && !isNaN(weekVal)) {
+                    activeWeek = weekVal;
+                }
+
+                let winningTeam = cols[1] ? cols[1].trim() : "";
+                let losingTeam = cols[2] ? cols[2].trim() : "";
+                let score = cols[3] ? cols[3].trim() : "";
+                let halftime = cols[4] ? cols[4].trim() : "";
+
+                if (!winningTeam || !losingTeam || !score) continue;
+
+                let boxScoreLink = "";
+                let standoutPlayers = [];
+
+                for (let j = 5; j < cols.length; j++) {
+                    let val = cols[j] ? cols[j].trim() : "";
+                    if (!val) continue;
+
+                    if (val.startsWith("http://") || val.startsWith("https://")) {
+                        boxScoreLink = val;
+                    } else if (!val.includes("Team") && !val.includes("scored")) {
+                        standoutPlayers.push(val);
+                    }
+                }
+
+                matchups.push({
+                    week: activeWeek,
+                    winningTeam,
+                    losingTeam,
+                    score,
+                    halftime,
+                    standoutPlayers,
+                    boxScoreLink
+                });
+            }
+            return matchups;
+        }
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById("tabs-container");
+            const weeks = [...new Set(allMatchups.map(m => m.week))];
+
+            if (weeks.length === 0) return;
+
+            if (!currentTab) {
+                currentTab = weeks[0];
+            }
+
+            tabsContainer.innerHTML = "";
+
+            // Render Week Tabs
+            weeks.forEach(week => {
+                const btn = document.createElement("button");
+                btn.className = `tab-btn ${week === currentTab ? 'active' : ''}`;
+                btn.innerText = `Week ${week}`;
+                btn.onclick = () => {
+                    currentTab = week;
+                    renderTabs();
+                    renderGrid();
+                };
+                tabsContainer.appendChild(btn);
+            });
+
+            // Render Standout Players Leaderboard Tab
+            const standoutsBtn = document.createElement("button");
+            standoutsBtn.className = `tab-btn ${currentTab === 'Standouts' ? 'active' : ''}`;
+            standoutsBtn.innerText = `⭐ Standout Players`;
+            standoutsBtn.onclick = () => {
+                currentTab = "Standouts";
+                renderTabs();
+                renderStandoutsLeaderboard();
+            };
+            tabsContainer.appendChild(standoutsBtn);
+        }
+
+        function renderGrid() {
+            const gridContainer = document.getElementById("grid-container");
+            gridContainer.className = "grid-container";
+
+            const filtered = allMatchups.filter(m => m.week === currentTab);
+
+            if (filtered.length === 0) {
+                gridContainer.innerHTML = `<div class="error">No matchup records found for Week ${currentTab}.</div>`;
+                return;
+            }
+
+            let html = "";
+            filtered.forEach(match => {
+                let scores = match.score.split("-");
+                let winScore = scores[0] ? scores[0].trim() : "";
+                let loseScore = scores[1] ? scores[1].trim() : "";
+
+                let winnerInfo = getTeamInfo(match.winningTeam);
+                let loserInfo = getTeamInfo(match.losingTeam);
+                let formattedHalftime = formatHalftimeScore(match.halftime);
+
+                let cardContent = `
+                    <div class="game-card" style="--team-color: ${winnerInfo.color}; --team-glow: ${winnerInfo.color}55;">
+                        <div class="matchup-header">
+                            <span>Week ${match.week} Matchup</span>
+                            <span>Halftime: ${formattedHalftime}</span>
+                        </div>
+                        <div class="teams-score-box">
+                            <div class="team-row winner">
+                                <div class="team-info">
+                                    ${winnerInfo.logo ? `<img src="${winnerInfo.logo}" alt="${match.winningTeam}" class="team-logo-img">` : ''}
+                                    <span>🏆 ${match.winningTeam}</span>
+                                </div>
+                                <span class="score">${winScore}</span>
+                            </div>
+                            <div class="team-row loser">
+                                <div class="team-info">
+                                    ${loserInfo.logo ? `<img src="${loserInfo.logo}" alt="${match.losingTeam}" class="team-logo-img">` : ''}
+                                    <span>${match.losingTeam}</span>
+                                </div>
+                                <span class="score">${loseScore}</span>
+                            </div>
+                        </div>
+                        <div class="card-details">
+                            <div><strong>Final Score:</strong> ${match.score}</div>
+                            ${match.standoutPlayers.length > 0 ? `
+                                <div><strong>Standout Players:</strong></div>
+                                <div class="standouts">
+                                    ${match.standoutPlayers.map(p => `<span class="player-tag">${p}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                            ${match.boxScoreLink ? `
+                                <div class="box-score-btn">
+                                    <span>📊 Click to View Box Score</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+
+                if (match.boxScoreLink) {
+                    html += `<a href="${match.boxScoreLink}" target="_blank" class="game-card-link">${cardContent}</a>`;
+                } else {
+                    html += `<div class="game-card-link">${cardContent}</div>`;
+                }
+            });
+            gridContainer.innerHTML = html;
+        }
+
+        function renderStandoutsLeaderboard() {
+            const container = document.getElementById("grid-container");
+            container.className = "standouts-wrapper";
+
+            let counts = {};
+            allMatchups.forEach(m => {
+                m.standoutPlayers.forEach(p => {
+                    counts[p] = (counts[p] || 0) + 1;
+                });
+            });
+
+            let sortedPlayers = Object.keys(counts)
+                .map(player => ({ name: player, count: counts[player] }))
+                .sort((a, b) => b.count - a.count);
+
+            if (sortedPlayers.length === 0) {
+                container.innerHTML = `<div class="error">No standout players found across any games.</div>`;
+                return;
+            }
+
+            let rows = sortedPlayers.map((item, index) => `
+                <tr class="rank-${index + 1}">
+                    <td>
+                        <span class="rank-badge">${index + 1}</span>
+                        <strong style="font-size: 1.05rem;">${item.name}</strong>
+                    </td>
+                    <td>
+                        <span class="count-pill">${item.count} ${item.count === 1 ? 'Mention' : 'Mentions'}</span>
+                    </td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <table class="standouts-table">
+                    <thead>
+                        <tr>
+                            <th>Player Name</th>
+                            <th>Times Mentioned</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function fetchSheetData(isBackground = false) {
+            try {
+                const response = await fetch(`${PUBLISHED_CSV_URL}&_t=${Date.now()}`);
+                if (!response.ok) throw new Error("Network response failed");
+                const text = await response.text();
+
+                if (text !== lastRawData) {
+                    lastRawData = text;
+                    allMatchups = processData(text);
+                    renderTabs();
+                    if (currentTab === "Standouts") {
+                        renderStandoutsLeaderboard();
+                    } else {
+                        renderGrid();
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch published spreadsheet data:", err);
+                if (!isBackground) {
+                    document.getElementById("grid-container").innerHTML = `
+                        <div class="error">Unable to fetch spreadsheet data.</div>
+                    `;
+                }
+            }
+        }
+
+        // Initial Load
+        fetchSheetData(false);
+
+        // Auto-update polling loop (checks for changes every 30s)
+        setInterval(() => {
+            fetchSheetData(true);
+        }, 30000);
+    </script>
+</body>
+</html>
